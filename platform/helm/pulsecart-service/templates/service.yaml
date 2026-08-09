@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.name }}
+spec:
+  selector: {app: {{ .Values.name }}}
+  ports:
+    - port: 80
+      targetPort: {{ .Values.containerPort }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ .Values.name }}
+automountServiceAccountToken: false

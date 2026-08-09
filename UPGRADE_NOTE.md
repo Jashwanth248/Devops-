@@ -1,1 +1,0 @@
-This repository is being upgraded from a learning-style DevOps demo into a company-style production platform portfolio. The main implementation is published in the next batch commit.

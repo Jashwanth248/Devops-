@@ -1,134 +1,153 @@
-# Cloud-Native DevOps & SRE Platform
+# PulseCart Production Platform
 
-A standalone, production-style DevOps portfolio project built to demonstrate the lifecycle a DevOps/SRE engineer owns: **application → CI → secure container → infrastructure as code → Kubernetes → GitOps → autoscaling → observability → incident response**.
+A company-style DevOps/SRE portfolio project that operates a small e-commerce platform the way a real platform team would: multiple services, isolated environments, GitOps delivery, progressive rollout, infrastructure as code, policy enforcement, observability, SLOs, incident response, and recovery drills.
 
-## Why this is not a basic DevOps demo
+> The application is deliberately small. The engineering value is in how the platform is provisioned, released, secured, observed, scaled, and recovered.
 
-This repository is designed as an interview project, not a collection of disconnected YAML examples. It includes a real API workload, automated tests, container hardening, infrastructure provisioning, Kubernetes reliability controls, GitOps reconciliation, policy-as-code, metrics, load generation, and operational runbooks.
+## Business workload
+
+PulseCart is a fictional commerce company with three workloads:
+
+- **gateway** — public customer API
+- **orders** — internal order service
+- **worker** — background processor
+
+PostgreSQL stores orders and Redis decouples asynchronous work.
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-  Dev[Developer] --> GH[GitHub]
-  GH --> CI[GitHub Actions]
-  CI --> Tests[Lint + Pytest]
-  CI --> Scan[Trivy Scan]
-  CI --> Image[Container Image]
-  TF[Terraform] --> GKE[GKE]
-  TF --> AR[Artifact Registry]
-  Git[Git Desired State] --> Argo[Argo CD]
-  Argo --> GKE
-  GKE --> Pods[FastAPI Pods]
-  HPA[HPA] --> Pods
-  Pods --> Prom[Prometheus]
+  Dev[Developer] --> PR[Pull Request]
+  PR --> CI[GitHub Actions]
+  CI --> Test[Test + Lint]
+  CI --> Scan[Security Scan]
+  CI --> Registry[Container Registry]
+
+  TF[Terraform Modules] --> VPC[VPC]
+  TF --> GKE[GKE]
+  TF --> Registry
+
+  Git[Git Desired State] --> Argo[Argo CD ApplicationSet]
+  Argo --> Stage[Staging]
+  Argo --> Prod[Production]
+
+  Prod --> Rollout[Argo Rollouts Canary]
+  Rollout --> GW[Gateway]
+  GW --> Orders[Orders]
+  Orders --> DB[(PostgreSQL)]
+  Orders --> Redis[(Redis)]
+  Redis --> Worker[Worker]
+
+  GW --> OTel[OpenTelemetry Collector]
+  Orders --> OTel
+  Worker --> OTel
+  OTel --> Prom[Prometheus]
   Prom --> Grafana[Grafana]
-  Policy[Kyverno] --> GKE
+
+  Policy[Kyverno] --> Prod
+  Alerts[Prometheus Rules] --> Runbooks[On-call Runbooks]
 ```
 
-## Engineering features
+## Platform capabilities
 
-- FastAPI service with health, readiness, metrics and controllable workload endpoints
-- Non-root Docker container and read-only Kubernetes filesystem
-- Kubernetes Deployment, Service, HPA, PDB and NetworkPolicy
-- Kustomize development/production overlays
-- Terraform-managed GKE and Artifact Registry
-- Workload Identity enabled on GKE
-- Argo CD automated sync, prune and self-heal
-- GitHub Actions lint/test/container/security pipeline
-- Terraform validation workflow
-- Trivy HIGH/CRITICAL vulnerability gate
-- Prometheus + Grafana local observability stack
-- Kyverno policy-as-code example
-- Load generation script for scaling/metrics demos
-- Incident-response runbook and interview walkthrough
+### Delivery
+- PR validation and immutable container builds
+- GitOps deployment through Argo CD
+- separate staging and production configuration
+- Argo Rollouts canary releases with metric analysis
+
+### Infrastructure
+- Terraform module layout for network, GKE, registry and environments
+- Workload Identity / short-lived cloud identity design
+- environment isolation to reduce blast radius
+
+### Reliability
+- health/readiness probes
+- resource requests and limits
+- HPA and PodDisruptionBudget
+- SLOs and error-budget thinking
+- Prometheus alert rules
+- incident runbooks and failure drills
+
+### Observability
+- OpenTelemetry Collector
+- Prometheus metrics
+- Grafana-ready dashboards
+- centralized telemetry path for metrics/traces/logs
+
+### Security
+- non-root containers
+- read-only root filesystems
+- dropped Linux capabilities
+- NetworkPolicy
+- Kyverno policy-as-code
+- vulnerability scanning
+- least-privilege service accounts
 
 ## Repository structure
 
 ```text
-app/                  application workload
-.github/workflows/    CI and Terraform validation
-argocd/               GitOps application definition
-k8s/                  Kubernetes base + environment overlays
-terraform/            GCP/GKE infrastructure as code
-observability/        Prometheus/Grafana configuration
-policies/             policy-as-code
-runbooks/             incident response
-scripts/              operational utilities
-tests/                automated application tests
+services/                     gateway, orders, worker
+platform/helm/               reusable service chart
+environments/                staging and production values
+gitops/                      Argo CD ApplicationSet
+progressive-delivery/        canary rollout + analysis
+terraform/modules/           reusable infrastructure modules
+terraform/environments/      staging/prod compositions
+observability/               OTel + Prometheus + SLOs
+policies/                    cluster policy-as-code
+runbooks/                    incident procedures
+scripts/                     smoke tests and failure drills
+docs/                        architecture + interview narrative
+.github/workflows/           CI and IaC validation
 ```
 
-## Run locally
+## Local demo
 
 ```bash
-git clone https://github.com/Jashwanth248/Devops-.git
-cd Devops-
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements-dev.txt
-pytest -q
-uvicorn app.main:app --reload --port 8080
+docker compose -f docker-compose.company.yml up --build
 ```
 
-Open:
-- API docs: `http://localhost:8080/docs`
-- Health: `http://localhost:8080/healthz`
-- Metrics: `http://localhost:8080/metrics`
-
-## Run the observability stack
+Then:
 
 ```bash
-docker compose up --build
+curl http://localhost:8080/healthz
+curl http://localhost:8080/api/orders
 ```
 
-Then open:
-- API: `http://localhost:8080`
-- Prometheus: `http://localhost:9090`
-- Grafana: `http://localhost:3000`
+## Production delivery flow
 
-Generate traffic:
+1. Developer opens a PR.
+2. CI tests, lints and scans.
+3. Merge produces an immutable image tag.
+4. Environment configuration is updated in Git.
+5. Argo CD reconciles staging.
+6. Production promotion uses Argo Rollouts.
+7. Prometheus analysis decides whether the canary continues or aborts.
+8. Alerts and SLOs provide post-release feedback.
 
-```bash
-./scripts/load_test.sh
-```
+## Interview demo
 
-## Provision GCP infrastructure
+A strong 10-minute demo is:
 
-```bash
-cd terraform
-terraform init
-terraform plan -var="project_id=YOUR_GCP_PROJECT_ID"
-terraform apply -var="project_id=YOUR_GCP_PROJECT_ID"
-```
+1. explain the workload and dependency graph;
+2. show Terraform environment isolation;
+3. explain why CI builds while GitOps deploys;
+4. show the ApplicationSet;
+5. walk through the production canary;
+6. show OTel + Prometheus alerts;
+7. run a failure drill;
+8. use the runbook to diagnose and roll back.
 
-Cloud resources can incur charges. Destroy lab infrastructure when finished:
+See [`docs/INTERVIEW_STORY.md`](docs/INTERVIEW_STORY.md).
 
-```bash
-terraform destroy -var="project_id=YOUR_GCP_PROJECT_ID"
-```
+## Resume bullets
 
-## Kubernetes / GitOps demo
+- Built a production-style Kubernetes platform for a multi-service commerce workload using Terraform, GKE, Helm, Argo CD and Argo Rollouts, with isolated staging/production environments and GitOps-based promotion.
+- Implemented reliability controls including HPA, PDBs, probes, NetworkPolicies, SLOs, Prometheus alerting, OpenTelemetry telemetry pipelines and documented incident-response runbooks.
+- Hardened delivery with immutable builds, vulnerability scanning, policy-as-code and OIDC-based cloud authentication to reduce reliance on long-lived credentials.
 
-1. Build and publish your container image.
-2. Replace `REPLACE_ME` in `k8s/base/deployment.yaml` and `argocd/application.yaml`.
-3. Provision GKE with Terraform.
-4. Install Argo CD in the cluster.
-5. Apply `argocd/application.yaml`.
-6. Change a manifest in Git and show Argo CD automatically reconciling the cluster.
-7. Run `scripts/load_test.sh` and observe metrics/autoscaling.
+## Portfolio note
 
-## What to explain in an interview
-
-- Why GitOps is safer than giving CI unrestricted cluster credentials.
-- Difference between pod autoscaling and node autoscaling.
-- Why readiness and liveness probes solve different failure modes.
-- Why PDBs matter during voluntary disruptions.
-- Why requests/limits matter for scheduling and HPA behavior.
-- How NetworkPolicy, hardened security contexts, image scanning and policy-as-code create defense in depth.
-- How Prometheus metrics, SLOs and runbooks reduce mean time to recovery.
-
-See [`docs/INTERVIEW.md`](docs/INTERVIEW.md) for a concise walkthrough.
-
-## Resume bullet
-
-> Engineered a production-style cloud-native delivery platform using GitHub Actions, Docker, Terraform, GKE, Argo CD, Kustomize, Prometheus/Grafana, autoscaling and policy-as-code, with automated tests, vulnerability scanning, hardened Kubernetes workloads and incident runbooks.
+PulseCart is fictional. The repository demonstrates realistic company platform patterns without claiming it serves a real production business.

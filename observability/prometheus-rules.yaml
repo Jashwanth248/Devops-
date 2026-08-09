@@ -1,0 +1,20 @@
+groups:
+  - name: pulsecart-sre
+    rules:
+      - alert: GatewayHigh5xxRate
+        expr: |
+          sum(rate(gateway_requests_total{status=~"5.."}[5m])) /
+          clamp_min(sum(rate(gateway_requests_total[5m])), 0.001) > 0.02
+        for: 10m
+        labels:
+          severity: page
+        annotations:
+          summary: Gateway 5xx rate is above 2%
+          runbook_url: runbooks/high-error-rate.md
+      - alert: GatewayNoTraffic
+        expr: sum(rate(gateway_requests_total[10m])) == 0
+        for: 15m
+        labels:
+          severity: ticket
+        annotations:
+          summary: Gateway is receiving no traffic

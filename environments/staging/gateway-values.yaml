@@ -1,0 +1,14 @@
+name: gateway
+replicaCount: 2
+containerPort: 8080
+image:
+  repository: ghcr.io/jashwanth248/devops-gateway
+  tag: staging
+resources:
+  requests: {cpu: 100m, memory: 128Mi}
+  limits: {cpu: 300m, memory: 256Mi}
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 70

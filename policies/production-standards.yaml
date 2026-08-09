@@ -1,0 +1,40 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: production-workload-standards
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: require-non-root
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+              namespaces: [pulsecart-production]
+      validate:
+        message: Production containers must run as non-root.
+        pattern:
+          spec:
+            containers:
+              - securityContext:
+                  runAsNonRoot: true
+                  allowPrivilegeEscalation: false
+    - name: require-resources
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+              namespaces: [pulsecart-production]
+      validate:
+        message: CPU and memory requests/limits are required.
+        pattern:
+          spec:
+            containers:
+              - resources:
+                  requests:
+                    cpu: '?*'
+                    memory: '?*'
+                  limits:
+                    cpu: '?*'
+                    memory: '?*'
