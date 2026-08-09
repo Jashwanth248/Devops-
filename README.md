@@ -1,6 +1,6 @@
 # PulseCart Production Platform
 
-A company-style DevOps/SRE portfolio project that operates a small e-commerce platform the way a real platform team would: multiple services, isolated environments, GitOps delivery, progressive rollout, infrastructure as code, policy enforcement, observability, SLOs, incident response, and recovery drills.
+A company-style DevOps/SRE platform project that operates a small e-commerce system the way a real platform team would: multiple services, isolated environments, GitOps delivery, progressive rollout, infrastructure as code, policy enforcement, observability, SLOs, incident response, and recovery drills.
 
 > The application is deliberately small. The engineering value is in how the platform is provisioned, released, secured, observed, scaled, and recovered.
 
@@ -99,7 +99,7 @@ observability/               OTel + Prometheus + SLOs
 policies/                    cluster policy-as-code
 runbooks/                    incident procedures
 scripts/                     smoke tests and failure drills
-docs/                        architecture + interview narrative
+docs/                        architecture and project explanation
 .github/workflows/           CI and IaC validation
 ```
 
@@ -127,27 +127,18 @@ curl http://localhost:8080/api/orders
 7. Prometheus analysis decides whether the canary continues or aborts.
 8. Alerts and SLOs provide post-release feedback.
 
-## Interview demo
+## Project explanation
 
-A strong 10-minute demo is:
+The project documentation walks through the platform from business workload to infrastructure, delivery, reliability, security, observability, incident handling, and architectural tradeoffs.
 
-1. explain the workload and dependency graph;
-2. show Terraform environment isolation;
-3. explain why CI builds while GitOps deploys;
-4. show the ApplicationSet;
-5. walk through the production canary;
-6. show OTel + Prometheus alerts;
-7. run a failure drill;
-8. use the runbook to diagnose and roll back.
+See [`docs/PROJECT_EXPLANATION.md`](docs/PROJECT_EXPLANATION.md).
 
-See [`docs/INTERVIEW_STORY.md`](docs/INTERVIEW_STORY.md).
-
-## Resume bullets
+## Engineering summary
 
 - Built a production-style Kubernetes platform for a multi-service commerce workload using Terraform, GKE, Helm, Argo CD and Argo Rollouts, with isolated staging/production environments and GitOps-based promotion.
 - Implemented reliability controls including HPA, PDBs, probes, NetworkPolicies, SLOs, Prometheus alerting, OpenTelemetry telemetry pipelines and documented incident-response runbooks.
 - Hardened delivery with immutable builds, vulnerability scanning, policy-as-code and OIDC-based cloud authentication to reduce reliance on long-lived credentials.
 
-## Portfolio note
+## Project scope
 
 PulseCart is fictional. The repository demonstrates realistic company platform patterns without claiming it serves a real production business.
