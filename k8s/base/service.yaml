@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: cloud-native-api
+spec:
+  selector:
+    app: cloud-native-api
+  ports:
+    - port: 80
+      targetPort: 8080

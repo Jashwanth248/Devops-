@@ -1,0 +1,56 @@
+name: CI / Build / Security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+  packages: write
+  security-events: write
+
+jobs:
+  quality-security-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Lint
+        run: ruff check app tests
+
+      - name: Unit tests
+        run: pytest -q
+
+      - name: Build container
+        run: docker build -t cloud-native-platform:${{ github.sha }} .
+
+      - name: Scan container for HIGH/CRITICAL vulnerabilities
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: cloud-native-platform:${{ github.sha }}
+          format: table
+          exit-code: '1'
+          severity: HIGH,CRITICAL
+
+      - name: Login to GitHub Container Registry
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Publish image to GHCR
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          docker tag cloud-native-platform:${{ github.sha }} ghcr.io/jashwanth248/devops-:${{ github.sha }}
+          docker tag cloud-native-platform:${{ github.sha }} ghcr.io/jashwanth248/devops-:latest
+          docker push ghcr.io/jashwanth248/devops-:${{ github.sha }}
+          docker push ghcr.io/jashwanth248/devops-:latest
